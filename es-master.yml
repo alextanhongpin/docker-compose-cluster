@@ -1,0 +1,11 @@
+http.host: 0.0.0.0
+http.cors.enabled: true
+http.cors.allow-origin: "*"
+# http.cors.allow-headers: Authorization
+
+node.master: true
+node.data: false
+
+transport.host: 0.0.0.0
+discovery.zen.minimum_master_nodes: 1
+cluster.routing.allocation.disk.threshold_enabled: false

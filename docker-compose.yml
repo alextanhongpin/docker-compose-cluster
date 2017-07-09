@@ -1,0 +1,84 @@
+version: '2'
+services:
+  es-master: 
+    image: docker.elastic.co/elasticsearch/elasticsearch:5.5.0
+    # We specify the container_name instead of allowing docker to specify one for
+    # us, since it is gonna be the master
+    container_name: es-master
+    environment:
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - cluster.name=docker-cluster
+      # - http.host=0.0.0.0
+      # - http.cors.enabled=true
+      # Security risk, only allow certain domain, not *
+      # - http.cors.allow-origin=*
+      # - http.cors.allow-headers=Authorization
+      # - transport.host=0.0.0.0
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    mem_limit: 1g
+    volumes:
+      - ./data1:/usr/share/elasticsearch/data
+      - ./es-master.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+    ports: 
+      - 9200:9200
+      - 9300:9300
+    networks:
+      - esnet
+    restart: always
+  es-nodes:
+    image: docker.elastic.co/elasticsearch/elasticsearch:5.5.0
+    environment:
+      - cluster.name=docker-cluster
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      # We’re instructing ES to use Zen Discovery in order to 
+      # find out the cluster topology. We’re telling nodes to 
+      # contact the es_master host as the entry point for the gossiping protocol
+      - "discovery.zen.ping.unicast.hosts=es-master"
+      #  We’re instructing Swarm to make sure that ES containers cannot run where the ES master container is running and that we only want to run one ES node per Swarm node.
+      # -"affinity:container!=*master*"
+      # -"affinity:container!=*es-node*"
+      - http.host=0.0.0.0
+      - http.cors.enabled=true
+      - http.cors.allow-origin=*
+      # - http.cors.allow-headers=Authorization
+      - transport.host=0.0.0.0
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - ./data2:/usr/share/elasticsearch/data
+    mem_limit: 1g
+    restart: always
+    networks:
+      - esnet
+  es-head:
+    image: mobz/elasticsearch-head:5
+    ports:
+      - 9100:9100
+    depends_on: 
+      - es-master
+    networks:
+      - esnet
+
+  # kibana:
+  #   image: kibana:4
+  #   environment:
+  #       - ELASTICSEARCH_URL=http://ES_MASTER_IP:9200
+  #   ports:
+  #       - "5601:5601/tcp"
+  #   container_name: kibana
+
+# volumes:
+#   esdata1:
+#     driver: local
+#   esdata2:
+#     driver: local
+
+networks:
+  esnet:
